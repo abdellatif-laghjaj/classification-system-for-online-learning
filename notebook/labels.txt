@@ -1,0 +1,10 @@
+0 distracted_mouth_closed
+1 distracted_mouth_open
+2 fatigue
+3 focused_mouth_closed
+4 focused_mouth_open
+5 listening
+6 raise_hand
+7 sleeping
+8 using_smartphone
+9 writing_reading
