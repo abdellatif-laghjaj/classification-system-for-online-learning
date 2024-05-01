@@ -160,4 +160,4 @@ cython_debug/
 .idea/
 .vscode
 
-/notbook/yolov8x.pt
+notebook/yolov8x.pt
