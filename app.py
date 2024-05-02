@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 import logging
 import random
 import io
+import uuid
+import os
 
 # Suppress warnings
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
@@ -185,16 +187,22 @@ if selected == "Frames Extraction":
     frames_slider = st.slider("Number of frames to extract", min_value=1, max_value=20, value=5)
 
     if uploaded_video is not None:
-        # Save uploaded video to a temporary file
-        video_path = f"temp_{uploaded_video.name}"
+        # Create output directory if it doesn't exist
+        if not os.path.exists("output"):
+            os.makedirs("output")
+
+        # Unique UUID for the uploaded video
+        uuid = str(uuid.uuid4())
+        video_path = f"output/temp_{uuid}.mp4"
         with open(video_path, "wb") as f:
             f.write(uploaded_video.read())
 
-        # Extract random frames
+        # Create a progress bar
+        progress_bar = st.progress(0)
         frames = extract_random_frames(video_path, frames_slider)
         detected_frames = []
 
-        for frame in frames:
+        for i, frame in enumerate(frames):
             results = yolo_model(frame)
             for box in results[0].boxes:
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
@@ -213,10 +221,14 @@ if selected == "Frames Extraction":
 
             detected_frames.append(frame)
 
+            # Update progress bar
+            progress_bar.progress((i + 1) / len(frames), text=f"Frame {i + 1} processed")
+
         fig = plot_images(detected_frames, cols=3)
         img_buf = io.BytesIO()
         plt.savefig(img_buf, format='png', bbox_inches='tight', pad_inches=0)
         img_buf.seek(0)
+        st.header("Extracted Frames with Detections")
         st.image(img_buf, caption="Extracted Frames with Detections", use_column_width=True)
 
 # Raw Video Tab
