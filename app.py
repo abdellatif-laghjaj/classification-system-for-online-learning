@@ -67,7 +67,7 @@ st.title("Comprehensive Classification System for Online Learning")
 tabs = ["Normal Image", "Frames Extraction", "Raw Video"]
 selected = option_menu(None, tabs, icons=["image", "film", "camera"], default_index=0, orientation="horizontal")
 
-# Main content
+# Normal Image Tab
 if selected == "Normal Image":
     st.header("Upload Normal Images")
     uploaded_file = st.file_uploader("Upload your file here (.jpg, .jpeg, .png)", type=["jpg", "jpeg", "png"])
