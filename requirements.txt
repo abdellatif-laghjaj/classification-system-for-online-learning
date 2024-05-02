@@ -1,8 +1,10 @@
 numpy
-streamlit
 pandas
 scikit-learn
+tensorflow==2.16.1
+opencv-python-headless
+ultralytics
 matplotlib
-seaborn
+streamlit
 streamlit_option_menu
-tensorflow
+pillow
