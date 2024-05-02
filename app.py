@@ -20,14 +20,36 @@ classification_model = load_model('./models/model.h5')
 
 # Function to classify a cropped image
 def classify_cropped_image(img_crop, model, target_size=(224, 224)):
+    # Adjust target size to match model's expected input
+    target_size = (model.input_shape[1], model.input_shape[2])
     img_resized = cv2.resize(img_crop, target_size)
     img_array = image.img_to_array(img_resized)
     img_array = np.expand_dims(img_array, axis=0)
-    img_array /= 255.0  # Rescale the image
+    img_array /= 255.0
     prediction = model.predict(img_array)
     predicted_class = class_indices_inverse[np.argmax(prediction[0])]
     probability = np.max(prediction[0])
     return predicted_class, probability
+
+
+# Function to derive behavioral metrics
+def derive_behavioral_metrics(predictions):
+    engagement_classes = ["focused_mouth_closed", "focused_mouth_open", "listening", "raise_hand", "writing_reading"]
+    distraction_classes = ["distracted_mouth_closed", "distracted_mouth_open", "using_smartphone"]
+    fatigue_classes = ["fatigue", "sleeping"]
+
+    total_students = len(predictions)
+    engagement_count = sum(1 for pred in predictions if pred in engagement_classes)
+    distraction_count = sum(1 for pred in predictions if pred in distraction_classes)
+    fatigue_count = sum(1 for pred in predictions if pred in fatigue_classes)
+    device_usage_count = sum(1 for pred in predictions if pred == "using_smartphone")
+
+    engagement_rate = (engagement_count / total_students) * 100 if total_students else 0
+    distraction_rate = (distraction_count / total_students) * 100 if total_students else 0
+    fatigue_rate = (fatigue_count / total_students) * 100 if total_students else 0
+    device_usage_rate = (device_usage_count / total_students) * 100 if total_students else 0
+
+    return engagement_rate, distraction_rate, fatigue_rate, device_usage_rate
 
 
 # Load class labels
@@ -52,6 +74,7 @@ if selected == "Normal Image":
 
     if uploaded_file is not None:
         # Display uploaded image
+        st.header("Uploaded Image")
         st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
 
         # Convert to OpenCV format
@@ -60,6 +83,7 @@ if selected == "Normal Image":
 
         # Perform YOLO detection
         results = yolo_model(img)
+        predictions = []
 
         # Initialize a figure for plotting
         fig, ax = plt.subplots()
@@ -74,30 +98,47 @@ if selected == "Normal Image":
             if cls_id == 0:
                 img_crop = img[y1:y2, x1:x2]
                 predicted_class, probability = classify_cropped_image(img_crop, classification_model)
+                predictions.append(predicted_class)
                 label = f"{predicted_class}: {probability:.2f}"
             else:
                 label = f"Other: {conf:.2f}"
 
             # Draw bounding box and label on the image
-            cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 0), 2)
-            cv2.putText(img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green for bounding box
+            cv2.putText(img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)  # Green for label
 
-        ax.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        # Convert image to RGB for correct color display
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+        # Plot and display the image
+        fig, ax = plt.subplots()
+        ax.imshow(img_rgb)
         plt.axis('off')
 
         # Convert plot to a PNG image and display it in Streamlit
         img_buf = io.BytesIO()
-        plt.savefig(img_buf, format='png')
+        plt.savefig(img_buf, format='png', bbox_inches='tight', pad_inches=0)
         img_buf.seek(0)
-        st.image(img_buf, caption="Detected Image", use_column_width=True)
+        st.header("Output Image")
+        st.image(img_buf, caption="Output Image", use_column_width=True)
 
-        # Display behavioral metrics (replace with actual metrics calculation)
-        st.write(f"Detected People: {len(results[0].boxes)}")
-        st.write("Behavioral Metrics:")
-        st.write(f"Engagement Rate: {np.random.uniform(0, 100):.2f}%")
-        st.write(f"Distraction Rate: {np.random.uniform(0, 100):.2f}%")
-        st.write(f"Fatigue Rate: {np.random.uniform(0, 100):.2f}%")
-        st.write(f"Device Usage Rate: {np.random.uniform(0, 100):.2f}%")
+        # Calculate and display behavioral metrics
+        engagement_rate, distraction_rate, fatigue_rate, device_usage_rate = derive_behavioral_metrics(predictions)
+
+        st.header("Behavioral Metrics")
+        st.markdown(f"Detected People: **<span style='color:green'>{len(predictions)}</span>**", unsafe_allow_html=True)
+        st.markdown(f"Engagement Rate: **<span style='color:green'>{engagement_rate:.2f}%</span>**",
+                    unsafe_allow_html=True)
+        st.markdown(f"Distraction Rate: **<span style='color:green'>{distraction_rate:.2f}%</span>**",
+                    unsafe_allow_html=True)
+        st.markdown(f"Fatigue Rate: **<span style='color:green'>{fatigue_rate:.2f}%</span>**", unsafe_allow_html=True)
+        st.markdown(f"Device Usage Rate: **<span style='color:green'>{device_usage_rate:.2f}%</span>**",
+                    unsafe_allow_html=True)
+
+        # Display the classification results
+        st.header("Classification Results")
+        for i, prediction in enumerate(predictions):
+            st.markdown(f"Person {i + 1}: **{prediction}**")
 
 # Frames Extraction Tab
 elif selected == "Frames Extraction":
