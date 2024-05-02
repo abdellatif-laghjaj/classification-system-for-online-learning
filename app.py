@@ -1,3 +1,19 @@
+import os
+
+
+# Install necessary OpenGL libraries on Linux
+def install_opengl_libraries():
+    os.system("sudo apt update")
+    os.system("sudo apt install -y libgl1-mesa-glx")
+
+
+# Check if running on Linux and install OpenGL libraries
+if os.name == 'posix' and os.uname().sysname == 'Linux':
+    print("Installing necessary OpenGL libraries...")
+    install_opengl_libraries()
+    print("OpenGL libraries installed successfully.")
+
+# Now import the required modules
 import streamlit as st
 from streamlit_option_menu import option_menu
 import cv2
@@ -11,7 +27,6 @@ import logging
 import random
 import io
 import uuid
-import os
 
 # Suppress warnings
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
