@@ -2,6 +2,7 @@ numpy
 pandas
 scikit-learn
 tensorflow==2.16.1
+opencv-python
 opencv-python-headless
 ultralytics
 matplotlib

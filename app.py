@@ -107,7 +107,7 @@ st.set_page_config(page_title="Comprehensive Classification System", layout="wid
 st.title("Comprehensive Classification System for Online Learning")
 
 # Navigation tabs
-tabs = ["Normal Image", "Frames Extraction", "Raw Video"]
+tabs = ["Normal Image", "Frames Extraction", "Real-Time Video"]
 selected = option_menu(None, tabs, icons=["image", "film", "camera"], default_index=0, orientation="horizontal")
 
 # Normal Image Tab
