@@ -77,9 +77,9 @@ if selected == "Normal Image":
         st.header("Uploaded Image")
         st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
 
-        # Convert to OpenCV format
+        # Convert to OpenCV format and ensure it's in RGB color space
         img = Image.open(uploaded_file)
-        img = np.array(img)
+        img = np.array(img.convert("RGB"))
 
         # Perform YOLO detection
         results = yolo_model(img)
@@ -107,12 +107,9 @@ if selected == "Normal Image":
             cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green for bounding box
             cv2.putText(img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)  # Green for label
 
-        # Convert image to RGB for correct color display
-        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-        # Plot and display the image
+        # No need to convert to RGB again, since it's already in RGB format
         fig, ax = plt.subplots()
-        ax.imshow(img_rgb)
+        ax.imshow(img)
         plt.axis('off')
 
         # Convert plot to a PNG image and display it in Streamlit
