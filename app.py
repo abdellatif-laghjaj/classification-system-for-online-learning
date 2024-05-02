@@ -8,6 +8,7 @@ from tensorflow.keras.models import load_model
 from PIL import Image
 import matplotlib.pyplot as plt
 import logging
+import random
 import io
 
 # Suppress warnings
@@ -32,6 +33,24 @@ def classify_cropped_image(img_crop, model, target_size=(224, 224)):
     return predicted_class, probability
 
 
+# Function to extract frames from the video
+def extract_random_frames(video_path, frames_number):
+    cap = cv2.VideoCapture(video_path)
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    frame_indices = sorted(random.sample(range(total_frames), frames_number))
+    frames = []
+
+    for index in frame_indices:
+        cap.set(cv2.CAP_PROP_POS_FRAMES, index)
+        ret, frame = cap.read()
+        if ret:
+            frames.append(frame)
+
+    cap.release()
+    return frames
+
+
 # Function to derive behavioral metrics
 def derive_behavioral_metrics(predictions):
     engagement_classes = ["focused_mouth_closed", "focused_mouth_open", "listening", "raise_hand", "writing_reading"]
@@ -50,6 +69,28 @@ def derive_behavioral_metrics(predictions):
     device_usage_rate = (device_usage_count / total_students) * 100 if total_students else 0
 
     return engagement_rate, distraction_rate, fatigue_rate, device_usage_rate
+
+
+# Function to plot an array of images with a specified number of columns
+def plot_images(images, cols=3, figsize=(15, 10)):
+    rows = len(images) // cols + (1 if len(images) % cols != 0 else 0)
+    fig, axes = plt.subplots(rows, cols, figsize=figsize)
+
+    for i, img in enumerate(images):
+        row, col = divmod(i, cols)
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        if rows > 1:
+            axes[row, col].imshow(img_rgb)
+            axes[row, col].axis('off')
+        else:
+            axes[col].imshow(img_rgb)
+            axes[col].axis('off')
+
+    for j in range(len(images), rows * cols):
+        fig.delaxes(axes.flatten()[j])
+
+    plt.tight_layout()
+    return fig
 
 
 # Load class labels
@@ -138,14 +179,45 @@ if selected == "Normal Image":
             st.markdown(f"Person {i + 1}: **{prediction}**")
 
 # Frames Extraction Tab
-elif selected == "Frames Extraction":
+if selected == "Frames Extraction":
     st.header("Upload Video for Frame Extraction")
     uploaded_video = st.file_uploader("Upload your video file here", type=["mp4", "mov", "avi"])
     frames_slider = st.slider("Number of frames to extract", min_value=1, max_value=20, value=5)
+
     if uploaded_video is not None:
-        st.video(uploaded_video)
-        # Placeholder for frames extraction result
-        st.write("Frames will be shown here")
+        # Save uploaded video to a temporary file
+        video_path = f"temp_{uploaded_video.name}"
+        with open(video_path, "wb") as f:
+            f.write(uploaded_video.read())
+
+        # Extract random frames
+        frames = extract_random_frames(video_path, frames_slider)
+        detected_frames = []
+
+        for frame in frames:
+            results = yolo_model(frame)
+            for box in results[0].boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                cls_id = int(box.cls[0])
+                conf = box.conf[0]
+
+                if cls_id == 0:
+                    img_crop = frame[y1:y2, x1:x2]
+                    predicted_class, probability = classify_cropped_image(img_crop, classification_model)
+                    label = f"{predicted_class}: {probability:.2f}"
+                else:
+                    label = f"Other: {conf:.2f}"
+
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+                cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+
+            detected_frames.append(frame)
+
+        fig = plot_images(detected_frames, cols=3)
+        img_buf = io.BytesIO()
+        plt.savefig(img_buf, format='png', bbox_inches='tight', pad_inches=0)
+        img_buf.seek(0)
+        st.image(img_buf, caption="Extracted Frames with Detections", use_column_width=True)
 
 # Raw Video Tab
 elif selected == "Raw Video":
