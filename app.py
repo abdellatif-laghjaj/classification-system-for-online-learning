@@ -265,7 +265,7 @@ if selected == "Frames Extraction":
             st.markdown(f"Person {i + 1}: **{prediction}**")
 
 # Real-Time Video Tab
-if selected == "Raw Video":
+if selected == "Real-Time Video":
     st.header("Upload and Process Video in Real-Time")
     uploaded_video = st.file_uploader("Upload your video file here", type=["mp4", "mov", "avi"])
 
@@ -274,16 +274,17 @@ if selected == "Raw Video":
         if not os.path.exists("output"):
             os.makedirs("output")
 
-        # Unique UUID for the uploaded video
         video_path = f"output/temp_{str(uuid.uuid4())}.mp4"
         with open(video_path, "wb") as f:
             f.write(uploaded_video.read())
 
-        # Process and display video in real-time
         cap = cv2.VideoCapture(video_path)
+        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        progress_bar = st.progress(0)
         stframe = st.empty()
+        predictions = []
 
-        while cap.isOpened():
+        for i in range(frame_count):
             ret, frame = cap.read()
             if not ret:
                 break
@@ -297,6 +298,7 @@ if selected == "Raw Video":
                 if cls_id == 0:
                     img_crop = frame[y1:y2, x1:x2]
                     predicted_class, probability = classify_cropped_image(img_crop, classification_model)
+                    predictions.append(predicted_class)
                     label = f"{predicted_class}: {probability:.2f}"
                 else:
                     label = f"Other: {conf:.2f}"
@@ -306,4 +308,23 @@ if selected == "Raw Video":
 
             stframe.image(frame, channels="BGR", use_column_width=True)
 
+            progress_bar.progress((i + 1) / frame_count, text=f"Processing Frame {i + 1} of {frame_count}")
+
         cap.release()
+
+        # Calculate and display behavioral metrics
+        engagement_rate, distraction_rate, fatigue_rate, device_usage_rate = derive_behavioral_metrics(predictions)
+
+        st.header("Behavioral Metrics")
+        st.markdown(f"Engagement Rate: **<span style='color:green'>{engagement_rate:.2f}%</span>**",
+                    unsafe_allow_html=True)
+        st.markdown(f"Distraction Rate: **<span style='color:green'>{distraction_rate:.2f}%</span>**",
+                    unsafe_allow_html=True)
+        st.markdown(f"Fatigue Rate: **<span style='color:green'>{fatigue_rate:.2f}%</span>**", unsafe_allow_html=True)
+        st.markdown(f"Device Usage Rate: **<span style='color:green'>{device_usage_rate:.2f}%</span>**",
+                    unsafe_allow_html=True)
+
+        # Display the classification results
+        st.header("Classification Results")
+        for i, prediction in enumerate(predictions):
+            st.markdown(f"Person {i + 1}: **{prediction}**")
