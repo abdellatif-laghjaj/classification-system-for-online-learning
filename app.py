@@ -192,8 +192,7 @@ if selected == "Frames Extraction":
             os.makedirs("output")
 
         # Unique UUID for the uploaded video
-        uuid = str(uuid.uuid4())
-        video_path = f"output/temp_{uuid}.mp4"
+        video_path = f"output/temp_{str(uuid.uuid4())}.mp4"
         with open(video_path, "wb") as f:
             f.write(uploaded_video.read())
 
@@ -201,6 +200,7 @@ if selected == "Frames Extraction":
         progress_bar = st.progress(0)
         frames = extract_random_frames(video_path, frames_slider)
         detected_frames = []
+        predictions = []
 
         for i, frame in enumerate(frames):
             results = yolo_model(frame)
@@ -212,6 +212,7 @@ if selected == "Frames Extraction":
                 if cls_id == 0:
                     img_crop = frame[y1:y2, x1:x2]
                     predicted_class, probability = classify_cropped_image(img_crop, classification_model)
+                    predictions.append(predicted_class)
                     label = f"{predicted_class}: {probability:.2f}"
                 else:
                     label = f"Other: {conf:.2f}"
@@ -231,11 +232,63 @@ if selected == "Frames Extraction":
         st.header("Extracted Frames with Detections")
         st.image(img_buf, caption="Extracted Frames with Detections", use_column_width=True)
 
-# Raw Video Tab
-elif selected == "Raw Video":
-    st.header("Upload Raw Video")
-    uploaded_video = st.file_uploader("Upload your raw video file here", type=["mp4", "mov", "avi"])
+        # Calculate and display behavioral metrics
+        engagement_rate, distraction_rate, fatigue_rate, device_usage_rate = derive_behavioral_metrics(predictions)
+
+        st.header("Behavioral Metrics")
+        st.markdown(f"Engagement Rate: **<span style='color:green'>{engagement_rate:.2f}%</span>**",
+                    unsafe_allow_html=True)
+        st.markdown(f"Distraction Rate: **<span style='color:green'>{distraction_rate:.2f}%</span>**",
+                    unsafe_allow_html=True)
+        st.markdown(f"Fatigue Rate: **<span style='color:green'>{fatigue_rate:.2f}%</span>**", unsafe_allow_html=True)
+        st.markdown(f"Device Usage Rate: **<span style='color:green'>{device_usage_rate:.2f}%</span>**",
+                    unsafe_allow_html=True)
+
+        # Display the classification results
+        st.header("Classification Results")
+        for i, prediction in enumerate(predictions):
+            st.markdown(f"Person {i + 1}: **{prediction}**")
+
+# Real-Time Video Tab
+if selected == "Raw Video":
+    st.header("Upload and Process Video in Real-Time")
+    uploaded_video = st.file_uploader("Upload your video file here", type=["mp4", "mov", "avi"])
+
     if uploaded_video is not None:
-        st.video(uploaded_video)
-        # Placeholder for classification result
-        st.write("Results will be shown here")
+        # Create output directory if it doesn't exist
+        if not os.path.exists("output"):
+            os.makedirs("output")
+
+        # Unique UUID for the uploaded video
+        video_path = f"output/temp_{str(uuid.uuid4())}.mp4"
+        with open(video_path, "wb") as f:
+            f.write(uploaded_video.read())
+
+        # Process and display video in real-time
+        cap = cv2.VideoCapture(video_path)
+        stframe = st.empty()
+
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            results = yolo_model(frame)
+            for box in results[0].boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                cls_id = int(box.cls[0])
+                conf = box.conf[0]
+
+                if cls_id == 0:
+                    img_crop = frame[y1:y2, x1:x2]
+                    predicted_class, probability = classify_cropped_image(img_crop, classification_model)
+                    label = f"{predicted_class}: {probability:.2f}"
+                else:
+                    label = f"Other: {conf:.2f}"
+
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+                cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+
+            stframe.image(frame, channels="BGR", use_column_width=True)
+
+        cap.release()
