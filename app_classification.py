@@ -31,6 +31,21 @@ if os.name == 'posix' and os.uname().sysname == 'Linux':
     install_opengl_libraries()
     print("OpenGL libraries installed successfully.")
 
+# Set up Streamlit app layout
+st.set_page_config(page_title="Comprehensive Classification System", layout="wide")
+st.title("Comprehensive Classification System for Online Learning")
+
+# Sidebar for selecting Classification or Clustering
+st.sidebar.title("Options")
+st.sidebar.write("You can choose between Classification and Clustering.")
+st.sidebar.success("Classification: Classify detected objects.")
+st.sidebar.success("Clustering: Cluster detected objects.")
+option = st.sidebar.selectbox("Select an option", ["Classification", "Clustering"])
+
+# Navigation tabs
+tabs = ["Normal Image", "Frames Extraction", "Real-Time Video"]
+selected = option_menu(None, tabs, icons=["image", "film", "camera"], default_index=0, orientation="horizontal")
+
 # Load YOLO model for object detection
 yolo_model = YOLO('./models/yolov8x.pt')
 
@@ -137,18 +152,6 @@ def cluster_images(images, max_clusters=3):
 
     return labels
 
-
-# Set up Streamlit app layout
-st.set_page_config(page_title="Comprehensive Classification System", layout="wide")
-st.title("Comprehensive Classification System for Online Learning")
-
-# Sidebar for selecting Classification or Clustering
-st.sidebar.title("Options")
-option = st.sidebar.selectbox("Select an option", ["Classification", "Clustering"])
-
-# Navigation tabs
-tabs = ["Normal Image", "Frames Extraction", "Real-Time Video"]
-selected = option_menu(None, tabs, icons=["image", "film", "camera"], default_index=0, orientation="horizontal")
 
 # Normal Image Tab
 if selected == "Normal Image":
