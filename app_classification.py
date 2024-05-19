@@ -33,7 +33,12 @@ if os.name == 'posix' and os.uname().sysname == 'Linux':
 
 # Set up Streamlit app layout
 st.set_page_config(page_title="Comprehensive Classification System", layout="wide")
-st.title("Comprehensive Classification System for Online Learning")
+st.markdown(
+    "<h3 style='text-align: center;'>Comprehensive "
+    "<span style='color: red'>Object Detection</span>, "
+    "<span style='color: red'>Classification</span>, "
+    "and <span style='color: red'>Clustering</span> System</h3>",
+    unsafe_allow_html=True)
 
 # Sidebar for selecting Classification or Clustering
 st.sidebar.title("Options")
