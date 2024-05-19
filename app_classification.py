@@ -1,15 +1,13 @@
 import os
 import streamlit as st
+from matplotlib import pyplot as plt
 from streamlit_option_menu import option_menu
 import cv2
 import numpy as np
 from ultralytics import YOLO
 from tensorflow.keras.preprocessing import image
 from tensorflow.keras.models import load_model
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras import layers, models, optimizers
 from PIL import Image
-import matplotlib.pyplot as plt
 import logging
 import random
 import io
@@ -170,19 +168,6 @@ if selected == "Normal Image":
         st.header("Output Image")
         st.image(img_buf, caption="Output Image", use_column_width=True)
 
-        # Calculate and display behavioral metrics
-        engagement_rate, distraction_rate, fatigue_rate, device_usage_rate = derive_behavioral_metrics(predictions)
-
-        st.header("Behavioral Metrics")
-        st.markdown(f"Detected People: **<span style='color:green'>{len(predictions)}</span>**", unsafe_allow_html=True)
-        st.markdown(f"Engagement Rate: **<span style='color:green'>{engagement_rate:.2f}%</span>**",
-                    unsafe_allow_html=True)
-        st.markdown(f"Distraction Rate: **<span style='color:green'>{distraction_rate:.2f}%</span>**",
-                    unsafe_allow_html=True)
-        st.markdown(f"Fatigue Rate: **<span style='color:green'>{fatigue_rate:.2f}%</span>**", unsafe_allow_html=True)
-        st.markdown(f"Device Usage Rate: **<span style='color:green'>{device_usage_rate:.2f}%</span>**",
-                    unsafe_allow_html=True)
-
         # Display the classification results
         st.header("Classification Results")
         for i, prediction in enumerate(predictions):
@@ -240,18 +225,6 @@ if selected == "Frames Extraction":
         st.header("Extracted Frames with Detections")
         st.image(img_buf, caption="Extracted Frames with Detections", use_column_width=True)
 
-        # Calculate and display behavioral metrics
-        engagement_rate, distraction_rate, fatigue_rate, device_usage_rate = derive_behavioral_metrics(predictions)
-
-        st.header("Behavioral Metrics")
-        st.markdown(f"Engagement Rate: **<span style='color:green'>{engagement_rate:.2f}%</span>**",
-                    unsafe_allow_html=True)
-        st.markdown(f"Distraction Rate: **<span style='color:green'>{distraction_rate:.2f}%</span>**",
-                    unsafe_allow_html=True)
-        st.markdown(f"Fatigue Rate: **<span style='color:green'>{fatigue_rate:.2f}%</span>**", unsafe_allow_html=True)
-        st.markdown(f"Device Usage Rate: **<span style='color:green'>{device_usage_rate:.2f}%</span>**",
-                    unsafe_allow_html=True)
-
         # Display the classification results
         st.header("Classification Results")
         for i, prediction in enumerate(predictions):
@@ -304,18 +277,6 @@ if selected == "Real-Time Video":
             progress_bar.progress((i + 1) / frame_count, text=f"Processing Frame {i + 1} of {frame_count}")
 
         cap.release()
-
-        # Calculate and display behavioral metrics
-        engagement_rate, distraction_rate, fatigue_rate, device_usage_rate = derive_behavioral_metrics(predictions)
-
-        st.header("Behavioral Metrics")
-        st.markdown(f"Engagement Rate: **<span style='color:green'>{engagement_rate:.2f}%</span>**",
-                    unsafe_allow_html=True)
-        st.markdown(f"Distraction Rate: **<span style='color:green'>{distraction_rate:.2f}%</span>**",
-                    unsafe_allow_html=True)
-        st.markdown(f"Fatigue Rate: **<span style='color:green'>{fatigue_rate:.2f}%</span>**", unsafe_allow_html=True)
-        st.markdown(f"Device Usage Rate: **<span style='color:green'>{device_usage_rate:.2f}%</span>**",
-                    unsafe_allow_html=True)
 
         # Display the classification results
         st.header("Classification Results")
