@@ -18,10 +18,12 @@ import uuid
 # Suppress warnings
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
+
 # Ensure necessary OpenGL libraries are installed on Linux
 def install_opengl_libraries():
     os.system("sudo apt update")
     os.system("sudo apt install -y libgl1-mesa-glx")
+
 
 if os.name == 'posix' and os.uname().sysname == 'Linux':
     print("Installing necessary OpenGL libraries...")
@@ -39,6 +41,7 @@ with open('./models/labels.txt', 'r') as f:
     class_labels = [line.strip() for line in f.readlines()]
 class_indices_inverse = {i: label for i, label in enumerate(class_labels)}
 
+
 # Function to classify a cropped image
 def classify_cropped_image(img_crop, model, target_size=(224, 224)):
     target_size = (model.input_shape[1], model.input_shape[2])
@@ -50,6 +53,7 @@ def classify_cropped_image(img_crop, model, target_size=(224, 224)):
     predicted_class = class_indices_inverse[np.argmax(prediction[0])]
     probability = np.max(prediction[0])
     return predicted_class, probability
+
 
 # Function to extract random frames from video
 def extract_random_frames(video_path, frames_number):
@@ -67,6 +71,7 @@ def extract_random_frames(video_path, frames_number):
 
     cap.release()
     return frames
+
 
 # Function to derive behavioral metrics
 def derive_behavioral_metrics(predictions):
@@ -86,6 +91,7 @@ def derive_behavioral_metrics(predictions):
     device_usage_rate = (device_usage_count / total_students) * 100 if total_students else 0
 
     return engagement_rate, distraction_rate, fatigue_rate, device_usage_rate
+
 
 # Function to plot images in a grid
 def plot_images(images, cols=3, figsize=(15, 10)):
@@ -107,6 +113,7 @@ def plot_images(images, cols=3, figsize=(15, 10)):
 
     plt.tight_layout()
     return fig
+
 
 # Set up Streamlit app layout
 st.set_page_config(page_title="Comprehensive Classification System", layout="wide")
@@ -168,10 +175,13 @@ if selected == "Normal Image":
 
         st.header("Behavioral Metrics")
         st.markdown(f"Detected People: **<span style='color:green'>{len(predictions)}</span>**", unsafe_allow_html=True)
-        st.markdown(f"Engagement Rate: **<span style='color:green'>{engagement_rate:.2f}%</span>**", unsafe_allow_html=True)
-        st.markdown(f"Distraction Rate: **<span style='color:green'>{distraction_rate:.2f}%</span>**", unsafe_allow_html=True)
+        st.markdown(f"Engagement Rate: **<span style='color:green'>{engagement_rate:.2f}%</span>**",
+                    unsafe_allow_html=True)
+        st.markdown(f"Distraction Rate: **<span style='color:green'>{distraction_rate:.2f}%</span>**",
+                    unsafe_allow_html=True)
         st.markdown(f"Fatigue Rate: **<span style='color:green'>{fatigue_rate:.2f}%</span>**", unsafe_allow_html=True)
-        st.markdown(f"Device Usage Rate: **<span style='color:green'>{device_usage_rate:.2f}%</span>**", unsafe_allow_html=True)
+        st.markdown(f"Device Usage Rate: **<span style='color:green'>{device_usage_rate:.2f}%</span>**",
+                    unsafe_allow_html=True)
 
         # Display the classification results
         st.header("Classification Results")
@@ -234,10 +244,13 @@ if selected == "Frames Extraction":
         engagement_rate, distraction_rate, fatigue_rate, device_usage_rate = derive_behavioral_metrics(predictions)
 
         st.header("Behavioral Metrics")
-        st.markdown(f"Engagement Rate: **<span style='color:green'>{engagement_rate:.2f}%</span>**", unsafe_allow_html=True)
-        st.markdown(f"Distraction Rate: **<span style='color:green'>{distraction_rate:.2f}%</span>**", unsafe_allow_html=True)
+        st.markdown(f"Engagement Rate: **<span style='color:green'>{engagement_rate:.2f}%</span>**",
+                    unsafe_allow_html=True)
+        st.markdown(f"Distraction Rate: **<span style='color:green'>{distraction_rate:.2f}%</span>**",
+                    unsafe_allow_html=True)
         st.markdown(f"Fatigue Rate: **<span style='color:green'>{fatigue_rate:.2f}%</span>**", unsafe_allow_html=True)
-        st.markdown(f"Device Usage Rate: **<span style='color:green'>{device_usage_rate:.2f}%</span>**", unsafe_allow_html=True)
+        st.markdown(f"Device Usage Rate: **<span style='color:green'>{device_usage_rate:.2f}%</span>**",
+                    unsafe_allow_html=True)
 
         # Display the classification results
         st.header("Classification Results")
@@ -296,10 +309,13 @@ if selected == "Real-Time Video":
         engagement_rate, distraction_rate, fatigue_rate, device_usage_rate = derive_behavioral_metrics(predictions)
 
         st.header("Behavioral Metrics")
-        st.markdown(f"Engagement Rate: **<span style='color:green'>{engagement_rate:.2f}%</span>**", unsafe_allow_html=True)
-        st.markdown(f"Distraction Rate: **<span style='color:green'>{distraction_rate:.2f}%</span>**", unsafe_allow_html=True)
+        st.markdown(f"Engagement Rate: **<span style='color:green'>{engagement_rate:.2f}%</span>**",
+                    unsafe_allow_html=True)
+        st.markdown(f"Distraction Rate: **<span style='color:green'>{distraction_rate:.2f}%</span>**",
+                    unsafe_allow_html=True)
         st.markdown(f"Fatigue Rate: **<span style='color:green'>{fatigue_rate:.2f}%</span>**", unsafe_allow_html=True)
-        st.markdown(f"Device Usage Rate: **<span style='color:green'>{device_usage_rate:.2f}%</span>**", unsafe_allow_html=True)
+        st.markdown(f"Device Usage Rate: **<span style='color:green'>{device_usage_rate:.2f}%</span>**",
+                    unsafe_allow_html=True)
 
         # Display the classification results
         st.header("Classification Results")
