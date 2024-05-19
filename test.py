@@ -1,6 +1,5 @@
 import os
 import numpy as np
-import cv2
 import streamlit as st
 from tensorflow.keras.applications.vgg16 import VGG16, preprocess_input
 from tensorflow.keras.preprocessing import image
@@ -14,7 +13,6 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, classification_report
-import matplotlib.pyplot as plt
 import logging
 import uuid
 import random
@@ -25,19 +23,20 @@ logging.getLogger('tensorflow').setLevel(logging.ERROR)
 # Set page layout
 st.set_page_config(page_title="Image Classification System", layout="wide")
 
-# Class labels
-class_labels = [
-    "distracted_mouth_closed",
-    "distracted_mouth_open",
-    "fatigue",
-    "focused_mouth_closed",
-    "focused_mouth_open",
-    "listening",
-    "raise_hand",
-    "sleeping",
-    "using_smartphone",
-    "writing_reading",
-]
+# Ensure the output directory exists, create if it doesn't
+output_dir = "output"
+os.makedirs(output_dir, exist_ok=True)
+
+
+# Load class labels from file
+def load_labels(file_path):
+    with open(file_path, "r") as file:
+        lines = file.readlines()
+        labels = [line.strip().split(" ", 1)[1] for line in lines]
+    return labels
+
+
+class_labels = load_labels("labels.txt")
 
 
 # Function to extract features using VGG16
@@ -48,17 +47,6 @@ def extract_features(img_path, model):
     img_data = preprocess_input(img_data)
     features = model.predict(img_data)
     return features.flatten()
-
-
-# Function to build a CNN model for feature extraction
-def build_cnn_model():
-    model = Sequential([
-        Dense(128, activation='relu', input_shape=(7 * 7 * 512,)),
-        Dense(64, activation='relu'),
-        Dense(10, activation='softmax')
-    ])
-    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-    return model
 
 
 # Function to classify features using the selected classifier
@@ -79,11 +67,32 @@ def classify_features(X_train, y_train, X_test, y_test, classifier_name):
     accuracy = accuracy_score(y_test, pred)
 
     unique_classes = np.unique(y_test)
-    target_names = [class_labels[i] for i in unique_classes]
+
+    # Generate target names for classification report, ensuring it has the same length as the number of classes
+    target_names = []
+    for i in range(len(class_labels)):
+        if i in unique_classes:
+            target_names.append(class_labels[i])
+        else:
+            target_names.append(f"Class {i}")
+
+    # Check if target_names and unique_classes have the same length
+    if len(target_names) != len(unique_classes):
+        target_names = [f"Class {i}" for i in unique_classes]
 
     report = classification_report(y_test, pred, target_names=target_names)
 
     return accuracy, report
+
+
+# Function to save results to a file
+def save_results(accuracy, report, img_path):
+    filename = os.path.basename(img_path) + "_result.txt"
+    filepath = os.path.join(output_dir, filename)
+    with open(filepath, "w") as f:
+        f.write(f"Accuracy: {accuracy:.2f}\n\n")
+        f.write("Classification Report:\n")
+        f.write(report)
 
 
 # Header
@@ -125,6 +134,9 @@ if uploaded_file is not None:
 
     # Classify using the selected classifier
     accuracy, report = classify_features(X_train, y_train, X_test, y_test, classifier_name)
+
+    # Save the results
+    save_results(accuracy, report, img_path)
 
     # Display the results
     st.write(f"{classifier_name} Accuracy: {accuracy:.2f}")
