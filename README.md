@@ -31,7 +31,7 @@ insights into student behavior.
     ```
 3. Run the Streamlit application:
     ```bash
-    streamlit run app.py --server.runOnSave true
+    streamlit run app_classification.py --server.runOnSave true
     ```
 4. Open the Streamlit app in your browser:
     ```
