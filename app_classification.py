@@ -129,6 +129,9 @@ def plot_images(images, cols=3, figsize=(15, 10)):
 
 # Function to cluster images
 def cluster_images(images, max_clusters=3):
+    if len(images) == 0:
+        return []
+
     # Convert images to feature vectors
     feature_vectors = []
     for img in images:
@@ -158,11 +161,7 @@ def cluster_images(images, max_clusters=3):
     return labels
 
 
-# Normal Image Tab
-if selected == "Normal Image":
-    st.header("Upload Normal Images")
-    uploaded_file = st.file_uploader("Upload your file here (.jpg, .jpeg, .png)", type=["jpg", "jpeg", "png"])
-
+def process_uploaded_image(uploaded_file, option):
     if uploaded_file is not None:
         # Display uploaded image
         st.header("Uploaded Image")
@@ -206,24 +205,20 @@ if selected == "Normal Image":
         st.image(img_buf, caption="Output Image", use_column_width=True)
 
         # Display the classification results
-        st.header("Classification Results")
-        for i, prediction in enumerate(predictions):
-            st.markdown(f"Person {i + 1}: **{prediction}**")
+        if option == "Classification":
+            st.header("Classification Results")
+            for i, prediction in enumerate(predictions):
+                st.markdown(f"Person {i + 1}: **{prediction}**")
 
         # Perform clustering if there are any images
-        if img_crops:
+        if option == "Clustering" and img_crops:
             labels = cluster_images(img_crops)
             st.header("Clustering Results")
             for i, label in enumerate(labels):
                 st.markdown(f"Object {i + 1}: **Cluster {label}**")
 
-# Frames Extraction Tab
-if selected == "Frames Extraction":
-    st.header("Upload Video for Frame Extraction")
-    uploaded_video = st.file_uploader("Upload your video file here", type=["mp4", "mov", "avi"])
 
-    frames_slider = st.slider("Select the number of frames to extract", min_value=1, max_value=50, value=10)
-
+def process_uploaded_video(uploaded_video, frames_slider, option):
     if uploaded_video is not None:
         # Create output directory if it doesn't exist
         if not os.path.exists("output"):
@@ -284,11 +279,8 @@ if selected == "Frames Extraction":
             for i, label in enumerate(labels):
                 st.markdown(f"Person {i + 1}: Cluster **{label}**")
 
-# Real-Time Video Tab
-if selected == "Real-Time Video":
-    st.header("Upload and Process Video in Real-Time")
-    uploaded_video = st.file_uploader("Upload your video file here", type=["mp4", "mov", "avi"])
 
+def process_real_time_video(uploaded_video, option):
     if uploaded_video is not None:
         # Create output directory if it doesn't exist
         if not os.path.exists("output"):
@@ -303,6 +295,7 @@ if selected == "Real-Time Video":
         progress_bar = st.progress(0)
         stframe = st.empty()
         predictions = []
+        detected_frames = []
 
         for i in range(frame_count):
             ret, frame = cap.read()
@@ -317,6 +310,7 @@ if selected == "Real-Time Video":
 
                 if cls_id == 0:
                     img_crop = frame[y1:y2, x1:x2]
+                    detected_frames.append(img_crop)
                     if option == "Classification":
                         predicted_class, probability = classify_cropped_image(img_crop, classification_model)
                         predictions.append(predicted_class)
@@ -342,6 +336,24 @@ if selected == "Real-Time Video":
         else:
             st.header("Clustering Results")
             # Cluster the images
-            labels = cluster_images([frame[y1:y2, x1:x2] for frame in detected_frames])
+            labels = cluster_images(detected_frames)
             for i, label in enumerate(labels):
                 st.markdown(f"Person {i + 1}: Cluster **{label}**")
+
+
+# Main app logic
+if selected == "Normal Image":
+    st.header("Upload Normal Images")
+    uploaded_file = st.file_uploader("Upload your file here (.jpg, .jpeg, .png)", type=["jpg", "jpeg", "png"])
+    process_uploaded_image(uploaded_file, option)
+
+elif selected == "Frames Extraction":
+    st.header("Upload Video for Frame Extraction")
+    uploaded_video = st.file_uploader("Upload your video file here", type=["mp4", "mov", "avi"])
+    frames_slider = st.slider("Select the number of frames to extract", min_value=1, max_value=50, value=10)
+    process_uploaded_video(uploaded_video, frames_slider, option)
+
+elif selected == "Real-Time Video":
+    st.header("Upload and Process Video in Real-Time")
+    uploaded_video = st.file_uploader("Upload your video file here", type=["mp4", "mov", "avi"])
+    process_real_time_video(uploaded_video, option)
