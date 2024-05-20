@@ -38,14 +38,15 @@ st.markdown(
     "<span style='color: red'>Object Detection</span>, "
     "<span style='color: red'>Classification</span>, "
     "and <span style='color: red'>Clustering</span> System</h3>",
-    unsafe_allow_html=True)
+    unsafe_allow_html=True
+)
 
 # Sidebar for selecting Classification or Clustering
 st.sidebar.title("Options")
 st.sidebar.write("You can choose between Classification and Clustering.")
 st.sidebar.success("Classification: Classify detected objects.")
 st.sidebar.success("Clustering: Cluster detected objects.")
-option = st.sidebar.selectbox("Select an option", ["Classification", "Clustering"])
+option = st.sidebar.selectbox("Select an option", ["Clustering", "Classification"], index=1)
 
 # Navigation tabs
 tabs = ["Normal Image", "Frames Extraction", "Real-Time Video"]
@@ -163,59 +164,68 @@ def cluster_images(images, max_clusters=3):
 
 def process_uploaded_image(uploaded_file, option):
     if uploaded_file is not None:
-        # Display uploaded image
-        st.header("Uploaded Image")
-        st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
-
-        # Convert to OpenCV format and ensure it's in RGB color space
+        # Read the image file
         img = Image.open(uploaded_file)
-        img = np.array(img.convert("RGB"))
+        image_np = np.array(img)
+        st.image(img, caption='Uploaded Image', use_column_width=True)
 
-        # Perform YOLO detection
-        results = yolo_model(img)
-        predictions = []
+        # Process the image with YOLO model
+        results = yolo_model(image_np)
+
         img_crops = []
-
-        fig, ax = plt.subplots()
-
         for box in results[0].boxes:
             x1, y1, x2, y2 = map(int, box.xyxy[0])
             cls_id = int(box.cls[0])
             conf = box.conf[0]
 
-            if cls_id == 0:  # Check if the detected class is 'person'
-                img_crop = img[y1:y2, x1:x2]
+            if cls_id == 0:  # Assuming cls_id == 0 is for person
+                img_crop = image_np[y1:y2, x1:x2]
                 img_crops.append(img_crop)
-                predicted_class, probability = classify_cropped_image(img_crop, classification_model)
-                predictions.append(predicted_class)
-                label = f"{predicted_class}: {probability:.2f}"
+                if option == "Classification":
+                    predicted_class, probability = classify_cropped_image(img_crop, classification_model)
+                    label = f"{predicted_class}: {probability:.2f}"
+                else:
+                    label = f"Person: {conf:.2f}"
             else:
                 label = f"Other: {conf:.2f}"
 
-            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.putText(img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            # Draw bounding box and label on the image
+            cv2.rectangle(image_np, (x1, y1), (x2, y2), (255, 0, 0), 2)
+            cv2.putText(image_np, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
 
-        # Display the output image
-        ax.imshow(img)
-        plt.axis('off')
-        img_buf = io.BytesIO()
-        plt.savefig(img_buf, format='png', bbox_inches='tight', pad_inches=0)
-        img_buf.seek(0)
-        st.header("Output Image")
-        st.image(img_buf, caption="Output Image", use_column_width=True)
+        st.image(image_np, caption='Processed Image', use_column_width=True)
 
-        # Display the classification results
         if option == "Classification":
             st.header("Classification Results")
-            for i, prediction in enumerate(predictions):
-                st.markdown(f"Person {i + 1}: **{prediction}**")
+            for i, img_crop in enumerate(img_crops):
+                predicted_class, probability = classify_cropped_image(img_crop, classification_model)
+                st.markdown(f"Person {i + 1}: **{predicted_class}** ({probability:.2f})")
+        else:
+            if img_crops:
+                st.header("Clustering Results")
+                labels = cluster_images(img_crops)
+                cluster_dict = {}
+                for i, label in enumerate(labels):
+                    cluster_dict.setdefault(label, []).append(img_crops[i])
 
-        # Perform clustering if there are any images
-        if option == "Clustering" and img_crops:
-            labels = cluster_images(img_crops)
-            st.header("Clustering Results")
-            for i, label in enumerate(labels):
-                st.markdown(f"Object {i + 1}: **Cluster {label}**")
+                for cluster_id, cluster_imgs in cluster_dict.items():
+                    st.markdown(f"### Cluster {cluster_id}")
+                    fig = plot_images(cluster_imgs, cols=3)
+                    img_buf = io.BytesIO()
+                    plt.savefig(img_buf, format='png', bbox_inches='tight', pad_inches=0)
+                    img_buf.seek(0)
+                    st.image(img_buf, caption=f"Cluster {cluster_id} Images", use_column_width=True)
+
+                # Interactive cluster exploration
+                selected_cluster = st.selectbox("Select a cluster to view images", sorted(cluster_dict.keys()))
+                st.markdown(f"### Images in Cluster {selected_cluster}")
+                fig = plot_images(cluster_dict[selected_cluster], cols=3)
+                img_buf = io.BytesIO()
+                plt.savefig(img_buf, format='png', bbox_inches='tight', pad_inches=0)
+                img_buf.seek(0)
+                st.image(img_buf, caption=f"Images in Cluster {selected_cluster}", use_column_width=True)
+            else:
+                st.warning("No crops found for clustering. Please upload another image.")
 
 
 def process_uploaded_video(uploaded_video, frames_slider, option):
@@ -275,9 +285,28 @@ def process_uploaded_video(uploaded_video, frames_slider, option):
         else:
             st.header("Clustering Results")
             # Cluster the images
-            labels = cluster_images([frame[y1:y2, x1:x2] for frame in detected_frames])
+            img_crops = [frame[y1:y2, x1:x2] for frame in detected_frames]
+            labels = cluster_images(img_crops)
+            cluster_dict = {}
             for i, label in enumerate(labels):
-                st.markdown(f"Person {i + 1}: Cluster **{label}**")
+                cluster_dict.setdefault(label, []).append(img_crops[i])
+
+            for cluster_id, cluster_images in cluster_dict.items():
+                st.markdown(f"### Cluster {cluster_id}")
+                fig = plot_images(cluster_images, cols=3)
+                img_buf = io.BytesIO()
+                plt.savefig(img_buf, format='png', bbox_inches='tight', pad_inches=0)
+                img_buf.seek(0)
+                st.image(img_buf, caption=f"Cluster {cluster_id} Images", use_column_width=True)
+
+            # Interactive cluster exploration
+            selected_cluster = st.selectbox("Select a cluster to view images", sorted(cluster_dict.keys()))
+            st.markdown(f"### Images in Cluster {selected_cluster}")
+            fig = plot_images(cluster_dict[selected_cluster], cols=3)
+            img_buf = io.BytesIO()
+            plt.savefig(img_buf, format='png', bbox_inches='tight', pad_inches=0)
+            img_buf.seek(0)
+            st.image(img_buf, caption=f"Images in Cluster {selected_cluster}", use_column_width=True)
 
 
 def process_real_time_video(uploaded_video, option):
@@ -337,8 +366,26 @@ def process_real_time_video(uploaded_video, option):
             st.header("Clustering Results")
             # Cluster the images
             labels = cluster_images(detected_frames)
+            cluster_dict = {}
             for i, label in enumerate(labels):
-                st.markdown(f"Person {i + 1}: Cluster **{label}**")
+                cluster_dict.setdefault(label, []).append(detected_frames[i])
+
+            for cluster_id, cluster_images in cluster_dict.items():
+                st.markdown(f"### Cluster {cluster_id}")
+                fig = plot_images(cluster_images, cols=3)
+                img_buf = io.BytesIO()
+                plt.savefig(img_buf, format='png', bbox_inches='tight', pad_inches=0)
+                img_buf.seek(0)
+                st.image(img_buf, caption=f"Cluster {cluster_id} Images", use_column_width=True)
+
+            # Interactive cluster exploration
+            selected_cluster = st.selectbox("Select a cluster to view images", sorted(cluster_dict.keys()))
+            st.markdown(f"### Images in Cluster {selected_cluster}")
+            fig = plot_images(cluster_dict[selected_cluster], cols=3)
+            img_buf = io.BytesIO()
+            plt.savefig(img_buf, format='png', bbox_inches='tight', pad_inches=0)
+            img_buf.seek(0)
+            st.image(img_buf, caption=f"Images in Cluster {selected_cluster}", use_column_width=True)
 
 
 # Main app logic
