@@ -12,7 +12,8 @@ import logging
 import random
 import io
 import uuid
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
+from sklearn.neighbors import NearestNeighbors
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
@@ -46,7 +47,12 @@ st.sidebar.title("Options")
 st.sidebar.write("You can choose between Classification and Clustering.")
 st.sidebar.success("Classification: Classify detected objects.")
 st.sidebar.success("Clustering: Cluster detected objects.")
-option = st.sidebar.selectbox("Select an option", ["Clustering", "Classification"], index=1)
+option = st.sidebar.selectbox("Select an option", ["Clustering", "Classification"])
+
+# Additional clustering algorithm selection
+if option == "Clustering":
+    clustering_algorithm = st.sidebar.selectbox("Select Clustering Algorithm",
+                                                ["K-Means", "KNN", "DBSCAN", "Hierarchical Clustering"])
 
 # Navigation tabs
 tabs = ["Normal Image", "Frames Extraction", "Real-Time Video"]
@@ -129,7 +135,7 @@ def plot_images(images, cols=3, figsize=(15, 10)):
 
 
 # Function to cluster images
-def cluster_images(images, max_clusters=3):
+def cluster_images(images, algorithm, max_clusters=3):
     if len(images) == 0:
         return []
 
@@ -155,10 +161,21 @@ def cluster_images(images, max_clusters=3):
     # Adjust number of clusters to be less than or equal to the number of samples
     n_clusters = min(len(images), max_clusters)
 
-    # Apply KMeans clustering
-    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
-    labels = kmeans.fit_predict(feature_vectors_pca)
+    # Apply selected clustering algorithm
+    if algorithm == "K-Means":
+        model = KMeans(n_clusters=n_clusters, random_state=42)
+    elif algorithm == "KNN":
+        model = NearestNeighbors(n_neighbors=n_clusters)
+        model.fit(feature_vectors_pca)
+        return model.kneighbors(return_distance=False)[:, 0]
+    elif algorithm == "DBSCAN":
+        model = DBSCAN(eps=0.5, min_samples=5)
+    elif algorithm == "Hierarchical Clustering":
+        model = AgglomerativeClustering(n_clusters=n_clusters)
+    else:
+        raise ValueError("Unknown clustering algorithm: " + algorithm)
 
+    labels = model.fit_predict(feature_vectors_pca)
     return labels
 
 
@@ -203,7 +220,8 @@ def process_uploaded_image(uploaded_file, option):
         else:
             if img_crops:
                 st.header("Clustering Results")
-                labels = cluster_images(img_crops)
+                st.subheader(f"Using {clustering_algorithm} Algorithm")
+                labels = cluster_images(img_crops, clustering_algorithm)
                 cluster_dict = {}
                 for i, label in enumerate(labels):
                     cluster_dict.setdefault(label, []).append(img_crops[i])
@@ -284,9 +302,10 @@ def process_uploaded_video(uploaded_video, frames_slider, option):
                 st.markdown(f"Person {i + 1}: **{prediction}**")
         else:
             st.header("Clustering Results")
+            st.subheader(f"Using {clustering_algorithm} Algorithm")
             # Cluster the images
             img_crops = [frame[y1:y2, x1:x2] for frame in detected_frames]
-            labels = cluster_images(img_crops)
+            labels = cluster_images(img_crops, clustering_algorithm)
             cluster_dict = {}
             for i, label in enumerate(labels):
                 cluster_dict.setdefault(label, []).append(img_crops[i])
@@ -364,8 +383,9 @@ def process_real_time_video(uploaded_video, option):
                 st.markdown(f"Person {i + 1}: **{prediction}**")
         else:
             st.header("Clustering Results")
+            st.subheader(f"Using {clustering_algorithm} Algorithm")
             # Cluster the images
-            labels = cluster_images(detected_frames)
+            labels = cluster_images(detected_frames, clustering_algorithm)
             cluster_dict = {}
             for i, label in enumerate(labels):
                 cluster_dict.setdefault(label, []).append(detected_frames[i])
