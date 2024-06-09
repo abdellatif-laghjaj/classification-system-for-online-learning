@@ -7,7 +7,8 @@ import plotly.express as px
 
 st.set_page_config(layout="wide")
 
-st.title("Student Behavior Clustering")
+st.title("Student Behavior Clustering 📊✨")
+st.write("This app performs clustering on student behavior data to identify patterns and segments of students.")
 
 # --- Sidebar for Settings and File Upload ---
 st.sidebar.header("Data and Clustering Settings")
