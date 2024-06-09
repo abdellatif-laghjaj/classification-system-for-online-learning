@@ -4,6 +4,9 @@ from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
 from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+import plotly.express as px  # For interactive visualizations
+
+st.set_page_config(layout="wide")  # For wider layout in Streamlit
 
 st.title("Student Behavior Clustering")
 
@@ -21,8 +24,18 @@ if uploaded_file is None:
 else:
     df = pd.read_csv(uploaded_file)
 
-# Select features for clustering (excluding student_id)
-features = df.drop('student_id', axis=1)
+# --- Data Preprocessing (Example: Handling Missing Values) ---
+# Replace this with your specific data cleaning needs
+df.fillna(df.mean(), inplace=True)
+
+# --- Feature Engineering (Example) ---
+df['engagement_score'] = (
+        df['attendance_rate'] * 0.5 +
+        df['test_average'] * 0.5
+)
+
+# Select features for clustering
+features = df[['attendance_rate', 'test_average', 'engagement_score']]
 
 # Sidebar for Algorithm Selection and Parameter Tuning
 st.sidebar.header("Clustering Settings")
@@ -42,35 +55,25 @@ linkage = 'ward'
 with st.sidebar.expander("Algorithm Parameters"):
     if algorithm == "KMeans":
         n_clusters_kmeans = st.slider(
-            "Number of Clusters (K)",
-            2, 10, 3,
-            help="Number of clusters to form as well as the number of centroids to generate."
+            "Number of Clusters (K)", 2, 10, 3
         )
     elif algorithm == "DBSCAN":
         eps = st.slider(
-            "Epsilon (eps)",
-            0.1, 2.0, 0.5, 0.1,
-            help="The maximum distance between two samples for them to be considered as in the same neighborhood."
+            "Epsilon (eps)", 0.1, 2.0, 0.5, 0.1
         )
         min_samples = st.slider(
-            "Min Samples",
-            2, 10, 5,
-            help="The number of samples (or total weight) in a neighborhood for a point to be considered as a core point."
+            "Min Samples", 2, 10, 5
         )
     else:  # Hierarchical
         n_clusters_hierarchical = st.slider(
-            "Number of Clusters",
-            2, 10, 3,
-            help="The number of clusters to find."
+            "Number of Clusters", 2, 10, 3
         )
         linkage = st.selectbox(
-            "Linkage",
-            ['ward', 'complete', 'average', 'single'],
-            help="Which linkage criterion to use. The linkage criterion determines which distance to use between sets of observation."
+            "Linkage", ['ward', 'complete', 'average', 'single']
         )
 
 
-# Function to perform clustering and handle potential errors
+# Function to perform clustering
 def cluster_data(algo_name, **kwargs):
     try:
         if algo_name == "KMeans":
@@ -84,26 +87,15 @@ def cluster_data(algo_name, **kwargs):
             )
 
         clusters = model.fit_predict(features)
-
-        # Silhouette Score Calculation (only if more than one cluster)
-        if len(set(clusters)) > 1:
-            silhouette_avg = silhouette_score(features, clusters)
-            db_index = davies_bouldin_score(features, clusters)
-            ch_index = calinski_harabasz_score(features, clusters)
-        else:
-            silhouette_avg = None
-            db_index = None
-            ch_index = None
-
-        return clusters, silhouette_avg, db_index, ch_index
+        return clusters
 
     except Exception as e:
         st.error(f"An error occurred during clustering: {e}")
-        return None, None, None, None
+        return None
 
 
-# Perform clustering based on the selected algorithm
-clusters, silhouette_avg, db_index, ch_index = cluster_data(
+# Perform clustering
+clusters = cluster_data(
     algorithm,
     n_clusters=n_clusters_kmeans if algorithm == "KMeans" else n_clusters_hierarchical,
     eps=eps if algorithm == "DBSCAN" else 0.5,
@@ -114,39 +106,47 @@ clusters, silhouette_avg, db_index, ch_index = cluster_data(
 if clusters is not None:
     df['cluster'] = clusters
 
-    # Display the clustered data and silhouette score
+    # --- Display Clustered Data ---
     st.subheader(f"Clustered Data using {algorithm}:")
     st.dataframe(df)
 
-    # Evaluation Metrics Section
-    st.subheader("Clustering Evaluation Metrics")
+    # --- Evaluation Metrics ---
+    if len(set(clusters)) > 1:
+        silhouette_avg = silhouette_score(features, clusters)
+        db_index = davies_bouldin_score(features, clusters)
+        ch_index = calinski_harabasz_score(features, clusters)
 
-    if silhouette_avg is not None:
-        st.markdown(f"<h5>Silhouette Score: <span style='color:green;'>{silhouette_avg:.2f}</span></h5>",
-                    unsafe_allow_html=True)
-        st.markdown(f"<h5>Davies-Bouldin Index: <span style='color:green;'>{db_index:.2f}</span></h5>",
-                    unsafe_allow_html=True)
-        st.markdown(f"<h5>Calinski-Harabasz Index: <span style='color:green;'>{ch_index:.2f}</span></h5>",
-                    unsafe_allow_html=True)
+        st.subheader("Clustering Evaluation Metrics")
+        st.markdown(f"**Silhouette Score:** {silhouette_avg:.2f}", unsafe_allow_html=True)
+        st.markdown(f"**Davies-Bouldin Index:** {db_index:.2f}", unsafe_allow_html=True)
+        st.markdown(f"**Calinski-Harabasz Index:** {ch_index:.2f}", unsafe_allow_html=True)
     else:
         st.warning("Evaluation metrics are not applicable. Only one cluster found.")
 
-    # Visualization (example using two features)
-    st.subheader("Cluster Visualization (Example)")
-    fig, ax = plt.subplots()
-    colors = ListedColormap(['red', 'green', 'blue', 'purple', 'orange'])
-    scatter = ax.scatter(
-        df['attendance_rate'], df['test_average'], c=df['cluster'], cmap=colors
+    # --- Interactive 3D Scatter Plot with Plotly ---
+    st.subheader("Interactive 3D Cluster Visualization")
+    fig = px.scatter_3d(
+        df,
+        x='attendance_rate',
+        y='test_average',
+        z='engagement_score',
+        color='cluster',
+        title=f"Student Clusters ({algorithm})",
+        labels={'attendance_rate': 'Attendance Rate',
+                'test_average': 'Test Average',
+                'engagement_score': 'Engagement Score'}
     )
-    ax.set_xlabel('Attendance Rate')
-    ax.set_ylabel('Test Average')
-    plt.title(f"Student Clusters ({algorithm})")
+    st.plotly_chart(fig)
 
-    # Dynamic Legend with Cluster Counts
-    legend_labels = []
-    for i in range(len(set(clusters))):
-        cluster_count = list(clusters).count(i)
-        legend_labels.append(f'Cluster {i} (n={cluster_count})')
+    # --- Cluster Profiling (Example using Plotly) ---
+    st.subheader("Cluster Profile Visualization")
+    profile_features = ['attendance_rate', 'test_average', 'engagement_score']
+    cluster_means = df.groupby('cluster')[profile_features].mean().reset_index()
 
-    plt.legend(handles=scatter.legend_elements()[0], labels=legend_labels)
-    st.pyplot(fig)
+    fig_profile = px.parallel_coordinates(
+        cluster_means,
+        color='cluster',
+        dimensions=profile_features,
+        title="Parallel Coordinates Plot for Cluster Profiles"
+    )
+    st.plotly_chart(fig_profile)
