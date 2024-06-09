@@ -150,6 +150,7 @@ if clusters is not None:
 
     # --- Cluster Profiling (Example using Plotly) ---
     st.subheader("Cluster Profile Visualization")
+    st.write("The parallel coordinates plot is a way to visualize and compare clusters across multiple features.")
     profile_features = ['attendance_rate', 'test_average', 'engagement_score']
     cluster_means = df.groupby('cluster')[profile_features].mean().reset_index()
 
