@@ -31,6 +31,13 @@ algorithm = st.sidebar.selectbox(
     ("KMeans", "DBSCAN", "Hierarchical")
 )
 
+# Default values for parameters
+n_clusters_kmeans = 3
+eps = 0.5
+min_samples = 5
+n_clusters_hierarchical = 3
+linkage = 'ward'
+
 # Parameter tuning section
 with st.sidebar.expander("Algorithm Parameters"):
     if algorithm == "KMeans":
