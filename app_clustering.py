@@ -41,13 +41,33 @@ linkage = 'ward'
 # Parameter tuning section
 with st.sidebar.expander("Algorithm Parameters"):
     if algorithm == "KMeans":
-        n_clusters_kmeans = st.slider("Number of Clusters (K)", 2, 10, 3)
+        n_clusters_kmeans = st.slider(
+            "Number of Clusters (K)",
+            2, 10, 3,
+            help="Number of clusters to form as well as the number of centroids to generate."
+        )
     elif algorithm == "DBSCAN":
-        eps = st.slider("Epsilon (eps)", 0.1, 2.0, 0.5, 0.1)
-        min_samples = st.slider("Min Samples", 2, 10, 5)
+        eps = st.slider(
+            "Epsilon (eps)",
+            0.1, 2.0, 0.5, 0.1,
+            help="The maximum distance between two samples for them to be considered as in the same neighborhood."
+        )
+        min_samples = st.slider(
+            "Min Samples",
+            2, 10, 5,
+            help="The number of samples (or total weight) in a neighborhood for a point to be considered as a core point."
+        )
     else:  # Hierarchical
-        n_clusters_hierarchical = st.slider("Number of Clusters", 2, 10, 3)
-        linkage = st.selectbox("Linkage", ['ward', 'complete', 'average', 'single'])
+        n_clusters_hierarchical = st.slider(
+            "Number of Clusters",
+            2, 10, 3,
+            help="The number of clusters to find."
+        )
+        linkage = st.selectbox(
+            "Linkage",
+            ['ward', 'complete', 'average', 'single'],
+            help="Which linkage criterion to use. The linkage criterion determines which distance to use between sets of observation."
+        )
 
 
 # Function to perform clustering and handle potential errors
