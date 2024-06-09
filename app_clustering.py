@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
 from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
+from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 import plotly.express as px  # For interactive visualizations
@@ -37,6 +38,10 @@ df['engagement_score'] = (
 # Select features for clustering
 features = df[['attendance_rate', 'test_average', 'engagement_score']]
 
+# Scaling the features
+scaler = StandardScaler()
+scaled_features = scaler.fit_transform(features)
+
 # Sidebar for Algorithm Selection and Parameter Tuning
 st.sidebar.header("Clustering Settings")
 algorithm = st.sidebar.selectbox(
@@ -55,21 +60,26 @@ linkage = 'ward'
 with st.sidebar.expander("Algorithm Parameters"):
     if algorithm == "KMeans":
         n_clusters_kmeans = st.slider(
-            "Number of Clusters (K)", 2, 10, 3
+            "Number of Clusters (K)", 2, 10, 3,
+            help="Number of clusters to form as well as the number of centroids to generate."
         )
     elif algorithm == "DBSCAN":
         eps = st.slider(
-            "Epsilon (eps)", 0.1, 2.0, 0.5, 0.1
+            "Epsilon (eps)", 0.1, 2.0, 0.5, 0.1,
+            help="The maximum distance between two samples for them to be considered as in the same neighborhood."
         )
         min_samples = st.slider(
-            "Min Samples", 2, 10, 5
+            "Min Samples", 2, 10, 5,
+            help="The number of samples (or total weight) in a neighborhood for a point to be considered as a core point."
         )
     else:  # Hierarchical
         n_clusters_hierarchical = st.slider(
-            "Number of Clusters", 2, 10, 3
+            "Number of Clusters", 2, 10, 3,
+            help="The number of clusters to find."
         )
         linkage = st.selectbox(
-            "Linkage", ['ward', 'complete', 'average', 'single']
+            "Linkage", ['ward', 'complete', 'average', 'single'],
+            help="Which linkage criterion to use. The linkage criterion determines which distance to use between sets of observation."
         )
 
 
@@ -86,7 +96,7 @@ def cluster_data(algo_name, **kwargs):
                 linkage=kwargs.get('linkage', 'ward')
             )
 
-        clusters = model.fit_predict(features)
+        clusters = model.fit_predict(scaled_features)
         return clusters
 
     except Exception as e:
@@ -112,9 +122,9 @@ if clusters is not None:
 
     # --- Evaluation Metrics ---
     if len(set(clusters)) > 1:
-        silhouette_avg = silhouette_score(features, clusters)
-        db_index = davies_bouldin_score(features, clusters)
-        ch_index = calinski_harabasz_score(features, clusters)
+        silhouette_avg = silhouette_score(scaled_features, clusters)
+        db_index = davies_bouldin_score(scaled_features, clusters)
+        ch_index = calinski_harabasz_score(scaled_features, clusters)
 
         st.subheader("Clustering Evaluation Metrics")
         st.markdown(f"**Silhouette Score:** {silhouette_avg:.2f}", unsafe_allow_html=True)
