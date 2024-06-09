@@ -1,13 +1,11 @@
 import streamlit as st
 import pandas as pd
 from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
-from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
 from sklearn.preprocessing import StandardScaler
-import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
-import plotly.express as px  # For interactive visualizations
+from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
+import plotly.express as px
 
-st.set_page_config(layout="wide")  # For wider layout in Streamlit
+st.set_page_config(layout="wide")
 
 st.title("Student Behavior Clustering")
 
@@ -38,7 +36,7 @@ df['engagement_score'] = (
 # Select features for clustering
 features = df[['attendance_rate', 'test_average', 'engagement_score']]
 
-# Scaling the features
+# Standard Scaling
 scaler = StandardScaler()
 scaled_features = scaler.fit_transform(features)
 
@@ -61,25 +59,25 @@ with st.sidebar.expander("Algorithm Parameters"):
     if algorithm == "KMeans":
         n_clusters_kmeans = st.slider(
             "Number of Clusters (K)", 2, 10, 3,
-            help="Number of clusters to form as well as the number of centroids to generate."
+            help="Number of clusters to form for KMeans."
         )
     elif algorithm == "DBSCAN":
         eps = st.slider(
             "Epsilon (eps)", 0.1, 2.0, 0.5, 0.1,
-            help="The maximum distance between two samples for them to be considered as in the same neighborhood."
+            help="Maximum distance between two samples for one to be considered as in the neighborhood of the other for DBSCAN."
         )
         min_samples = st.slider(
             "Min Samples", 2, 10, 5,
-            help="The number of samples (or total weight) in a neighborhood for a point to be considered as a core point."
+            help="The number of samples in a neighborhood for a point to be considered as a core point for DBSCAN."
         )
     else:  # Hierarchical
         n_clusters_hierarchical = st.slider(
             "Number of Clusters", 2, 10, 3,
-            help="The number of clusters to find."
+            help="Number of clusters to find for hierarchical clustering."
         )
         linkage = st.selectbox(
             "Linkage", ['ward', 'complete', 'average', 'single'],
-            help="Which linkage criterion to use. The linkage criterion determines which distance to use between sets of observation."
+            help="Which linkage criterion to use for hierarchical clustering."
         )
 
 
@@ -161,3 +159,22 @@ if clusters is not None:
         title="Parallel Coordinates Plot for Cluster Profiles"
     )
     st.plotly_chart(fig_profile)
+
+    # --- Dynamic Interpretation of Clusters ---
+    st.subheader("Interpretation of Clusters")
+    for cluster_num in cluster_means['cluster']:
+        cluster_data = cluster_means[cluster_means['cluster'] == cluster_num]
+        st.write(f"**Cluster {cluster_num}:**")
+        for feature in profile_features:
+            st.write(f"- **{feature.replace('_', ' ').title()}:** {cluster_data[feature].values[0]:.2f}")
+
+        highest_feature = cluster_data[profile_features].idxmax(axis=1).values[0]
+        lowest_feature = cluster_data[profile_features].idxmin(axis=1).values[0]
+
+        st.write(f"This cluster has the highest average {highest_feature.replace('_', ' ')} "
+                 f"and the lowest average {lowest_feature.replace('_', ' ')}.")
+        st.write("---")
+
+    # Additional insights based on cluster characteristics can be added here.
+else:
+    st.error("An error occurred during clustering. Please check the algorithm parameters.")
