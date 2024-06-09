@@ -37,13 +37,6 @@ if os.name == 'posix' and os.uname().sysname == 'Linux':
 
 # Set up Streamlit app layout
 st.set_page_config(page_title="Comprehensive Student Behavior Analysis", layout="wide")
-st.markdown(
-    "<h3 style='text-align: center;'>Comprehensive "
-    "<span style='color: red'>Object Detection</span>, "
-    "<span style='color: red'>Classification</span>, "
-    "and <span style='color: red'>Clustering</span> System</h3>",
-    unsafe_allow_html=True
-)
 
 # Sidebar for selecting modes
 st.sidebar.title("Options")
@@ -52,6 +45,13 @@ mode = st.sidebar.selectbox("Select an option", ["Behavior Analysis", "Clusterin
 
 # Navigation tabs for behavior analysis
 if mode == "Behavior Analysis":
+    st.markdown(
+        "<h3 style='text-align: center;'>Comprehensive "
+        "<span style='color: red'>Object Detection</span>, "
+        "<span style='color: red'>Classification</span>, "
+        "and <span style='color: red'>Clustering</span> System</h3>",
+        unsafe_allow_html=True
+    )
     tabs = ["Normal Image", "Frames Extraction", "Real-Time Video"]
     selected = option_menu(None, tabs, icons=["image", "film", "camera"], default_index=0, orientation="horizontal")
     st.sidebar.header("Model Settings")
