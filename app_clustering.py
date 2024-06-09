@@ -27,25 +27,27 @@ if uploaded_file is not None:
     # Parameter tuning section (initially hidden)
     with st.sidebar.expander("Algorithm Parameters"):
         if algorithm == "KMeans":
-            n_clusters = st.slider("Number of Clusters (K)", 2, 10, 3)
+            n_clusters_kmeans = st.slider("Number of Clusters (K)", 2, 10, 3)
         elif algorithm == "DBSCAN":
             eps = st.slider("Epsilon (eps)", 0.1, 2.0, 0.5, 0.1)
             min_samples = st.slider("Min Samples", 2, 10, 5)
         else:  # Hierarchical
-            n_clusters = st.slider("Number of Clusters", 2, 10, 3)
+            n_clusters_hierarchical = st.slider("Number of Clusters", 2, 10, 3)
             linkage = st.selectbox("Linkage", ['ward', 'complete', 'average', 'single'])
 
-            # Function to perform clustering and handle potential errors
 
-
-    def cluster_data(algo_name):
+    # Function to perform clustering and handle potential errors
+    def cluster_data(algo_name, **kwargs):
         try:
             if algo_name == "KMeans":
-                model = KMeans(n_clusters=n_clusters, random_state=42)
+                model = KMeans(n_clusters=kwargs.get('n_clusters', 3), random_state=42)
             elif algo_name == "DBSCAN":
-                model = DBSCAN(eps=eps, min_samples=min_samples)
+                model = DBSCAN(eps=kwargs.get('eps', 0.5), min_samples=kwargs.get('min_samples', 5))
             else:  # Hierarchical
-                model = AgglomerativeClustering(n_clusters=n_clusters, linkage=linkage)
+                model = AgglomerativeClustering(
+                    n_clusters=kwargs.get('n_clusters', 3),
+                    linkage=kwargs.get('linkage', 'ward')
+                )
 
             clusters = model.fit_predict(features)
 
@@ -62,8 +64,14 @@ if uploaded_file is not None:
             return None, None
 
 
-    # Perform clustering
-    clusters, silhouette_avg = cluster_data(algorithm)
+    # Perform clustering based on the selected algorithm
+    clusters, silhouette_avg = cluster_data(
+        algorithm,
+        n_clusters=n_clusters_kmeans if algorithm == "KMeans" else 3,
+        eps=eps if algorithm == "DBSCAN" else 0.5,
+        min_samples=min_samples if algorithm == "DBSCAN" else 5,
+        linkage=linkage if algorithm == "Hierarchical" else "ward",
+    )
 
     if clusters is not None:
         df['cluster'] = clusters
@@ -81,7 +89,7 @@ if uploaded_file is not None:
         # Visualization (example using two features)
         st.subheader("Cluster Visualization (Example)")
         fig, ax = plt.subplots()
-        colors = ListedColormap(['red', 'green', 'blue', 'purple', 'orange'])  # More colors for potential clusters
+        colors = ListedColormap(['red', 'green', 'blue', 'purple', 'orange'])
         scatter = ax.scatter(
             df['attendance_rate'], df['test_average'], c=df['cluster'], cmap=colors
         )
@@ -96,28 +104,4 @@ if uploaded_file is not None:
             legend_labels.append(f'Cluster {i} (n={cluster_count})')
 
         plt.legend(handles=scatter.legend_elements()[0], labels=legend_labels)
-        st.pyplot(fig)
-
-        # Benchmarking Visualization
-        st.subheader("Algorithm Comparison (Silhouette Score)")
-        algorithms = ["KMeans", "DBSCAN", "Hierarchical"]
-        scores = []
-        for algo in algorithms:
-            _, score = cluster_data(algo)
-            scores.append(score)
-
-        fig, ax = plt.subplots()
-        bars = ax.bar(algorithms, scores)
-        ax.set_ylabel("Silhouette Score")
-        plt.title("Clustering Algorithm Performance")
-
-        # Add score labels on top of the bars (if score is available)
-        for bar, score in zip(bars, scores):
-            if score is not None:
-                height = bar.get_height()
-                ax.text(bar.get_x() + bar.get_width() / 2, height,
-                        f'{score:.2f}', ha='center', va='bottom')
-            else:
-                st.warning(f"Silhouette Score for {algo} is not available.")
-
         st.pyplot(fig)
