@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
@@ -54,18 +54,22 @@ if uploaded_file is not None:
             # Silhouette Score Calculation (only if more than one cluster)
             if len(set(clusters)) > 1:
                 silhouette_avg = silhouette_score(features, clusters)
+                db_index = davies_bouldin_score(features, clusters)
+                ch_index = calinski_harabasz_score(features, clusters)
             else:
-                silhouette_avg = None  # Indicate score not applicable
+                silhouette_avg = None
+                db_index = None
+                ch_index = None
 
-            return clusters, silhouette_avg
+            return clusters, silhouette_avg, db_index, ch_index
 
         except Exception as e:
             st.error(f"An error occurred during clustering: {e}")
-            return None, None
+            return None, None, None, None
 
 
     # Perform clustering based on the selected algorithm
-    clusters, silhouette_avg = cluster_data(
+    clusters, silhouette_avg, db_index, ch_index = cluster_data(
         algorithm,
         n_clusters=n_clusters_kmeans if algorithm == "KMeans" else 3,
         eps=eps if algorithm == "DBSCAN" else 0.5,
@@ -79,11 +83,20 @@ if uploaded_file is not None:
         # Display the clustered data and silhouette score
         st.subheader(f"Clustered Data using {algorithm}:")
         st.dataframe(df)
+
+        # Evaluation Metrics Section
+        st.subheader("Clustering Evaluation Metrics")
+
         if silhouette_avg is not None:
-            st.write(f"Silhouette Score: {silhouette_avg:.2f}")
+            st.markdown(f"<h5>Silhouette Score: <span style='color:green;'>{silhouette_avg:.2f}</span></h5>",
+                        unsafe_allow_html=True)
+            st.markdown(f"<h5>Davies-Bouldin Index: <span style='color:green;'>{db_index:.2f}</span></h5>",
+                        unsafe_allow_html=True)
+            st.markdown(f"<h5>Calinski-Harabasz Index: <span style='color:green;'>{ch_index:.2f}</span></h5>",
+                        unsafe_allow_html=True)
         else:
             st.warning(
-                "Silhouette Score is not applicable. Only one cluster found."
+                "Evaluation metrics are not applicable. Only one cluster found."
             )
 
         # Visualization (example using two features)
